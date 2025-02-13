@@ -1,97 +1,148 @@
-const socket = io();
-const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
-
 let localStream;
-let peerConnection;
+let peer;
+let socket;
+let roomId;
+const peers = {}; // Store peer connections
 
-const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+// Initialize the application
+async function init() {
+    socket = io('/');
+    
+    peer = new Peer(undefined, {
+        host: 'be76-103-152-199-178.ngrok-free.app', // Use your ngrok URL
+        port: 443,
+        path: '/peerjs',
+        secure: true,
+        debug: 3,
+    });
 
-// Get user media
-navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    .then(stream => {
-        localVideo.srcObject = stream;
-        localStream = stream;
-    })
-    .catch(error => console.error('Error accessing media devices:', error));
+    setupEventListeners();
+}
 
-// Handle signaling
-socket.on('offer', async (offer) => {
-    peerConnection = new RTCPeerConnection(configuration);
-    peerConnection.addTrack(localStream.getTracks()[0], localStream);
-    peerConnection.addTrack(localStream.getTracks()[1], localStream);
+function setupEventListeners() {
+    // Join room button click
+    document.getElementById('joinButton').addEventListener('click', joinRoom);
 
-    peerConnection.ontrack = (event) => {
-        remoteVideo.srcObject = event.streams[0];
-    };
+    // PeerJS connection open
+    peer.on('open', (id) => {
+        console.log('My peer ID is: ' + id);
+    });
 
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-    socket.emit('answer', answer);
-});
+    // Handle incoming calls
+    peer.on('call', async (call) => {
+        call.answer(localStream); // Answer with local stream
 
-socket.on('answer', async (answer) => {
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-});
+        const remoteVideo = createVideoElement(call.peer);
+        call.on('stream', (remoteStream) => {
+            remoteVideo.srcObject = remoteStream;
+        });
 
-socket.on('ice-candidate', async (candidate) => {
-    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-});
+        call.on('close', () => {
+            removeVideoElement(call.peer);
+        });
 
-// const processVideo = async () => {
-//     const video = document.getElementById('localVideo');
-//     const canvas = document.createElement('canvas');
-//     const context = canvas.getContext('2d');
+        peers[call.peer] = call;
+    });
 
-//     canvas.width = video.videoWidth;
-//     canvas.height = video.videoHeight;
+    // Socket.IO event handlers
+    socket.on('user-connected', (userId) => {
+        console.log('User connected:', userId);
+        connectToNewUser(userId, localStream);
+    });
 
-//     setInterval(() => {
-//         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-//         // const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    socket.on('user-disconnected', (userId) => {
+        if (peers[userId]) {
+            peers[userId].close();
+        }
+        removeVideoElement(userId);
+    });
 
-//         // Run AI models on imageData
-//         detectFaces(imageData);
-//         detectNumberPlates(imageData);
-//     }, 1000 / 30); // 30 FPS
-// };
+    // Control button handlers
+    document.getElementById('toggleVideo').addEventListener('click', toggleVideo);
+    document.getElementById('toggleAudio').addEventListener('click', toggleAudio);
+    document.getElementById('endCall').addEventListener('click', endCall);
+}
 
-// const detectFaces = (imageData) => {
-//     // Use TensorFlow.js or OpenCV.js for face detection
-//     console.log('Running face detection...');
-// };
+async function joinRoom() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true
+        });
 
-// const detectNumberPlates = (imageData) => {
-//     // Use TensorFlow.js or OpenCV.js for number plate detection
-//     console.log('Running number plate detection...');
-// };
+        const localVideo = document.getElementById('localVideo');
+        localVideo.srcObject = localStream;
+        localVideo.addEventListener('loadedmetadata', () => {
+            localVideo.play();
+        });
 
-// processVideo();
+        roomId = document.getElementById('roomInput').value || generateRoomId();
+        document.getElementById('roomDisplay').textContent = roomId;
 
-const startVoiceRecognition = () => {
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+        socket.emit('join-room', roomId, peer.id);
+        document.getElementById('joinForm').style.display = 'none';
 
-    recognition.start();
+    } catch (error) {
+        console.error('Error accessing media devices:', error);
+        alert('Error accessing camera/microphone');
+    }
+}
 
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        console.log('Recognized speech:', transcript);
-        analyzeSentiment(transcript);
-    };
-};
+function connectToNewUser(userId, stream) {
+    const call = peer.call(userId, stream);
 
-const analyzeSentiment = (text) => {
-    // Use OpenAI or NLP libraries for sentiment analysis
-    console.log('Analyzing sentiment...');
-};
+    const remoteVideo = createVideoElement(userId);
+    call.on('stream', (remoteStream) => {
+        remoteVideo.srcObject = remoteStream;
+    });
 
-startVoiceRecognition();
-const updateDashboard = (faces, plates, sentiment) => {
-    document.getElementById('face-recognition-result').innerText = `Faces Detected: ${faces}`;
-    document.getElementById('number-plate-result').innerText = `Number Plates Detected: ${plates}`;
-    document.getElementById('sentiment-result').innerText = `Sentiment: ${sentiment}`;
-};
+    call.on('close', () => {
+        removeVideoElement(userId);
+    });
+
+    peers[userId] = call;
+}
+
+function createVideoElement(id) {
+    const videoGrid = document.querySelector('.video-grid');
+    const videoElement = document.createElement('video');
+    videoElement.id = `video-${id}`;
+    videoElement.autoplay = true;
+    videoElement.playsInline = true;
+    videoGrid.appendChild(videoElement);
+    return videoElement;
+}
+
+function removeVideoElement(id) {
+    const videoElement = document.getElementById(`video-${id}`);
+    if (videoElement) {
+        videoElement.remove();
+    }
+}
+
+function generateRoomId() {
+    return Math.random().toString(36).substring(2, 7);
+}
+
+function toggleVideo() {
+    const videoTrack = localStream.getVideoTracks()[0];
+    videoTrack.enabled = !videoTrack.enabled;
+    document.getElementById('toggleVideo').classList.toggle('disabled');
+}
+
+function toggleAudio() {
+    const audioTrack = localStream.getAudioTracks()[0];
+    audioTrack.enabled = !audioTrack.enabled;
+    document.getElementById('toggleAudio').classList.toggle('disabled');
+}
+
+function endCall() {
+    Object.values(peers).forEach((call) => call.close());
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
+    window.location.reload();
+}
+
+// Initialize when page loads
+init();

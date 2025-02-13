@@ -1,27 +1,59 @@
+<!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Video Call</title>
-  <link rel="stylesheet" href="/style.css">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-User Video Call</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 </head>
 <body>
-    <div id="dashboard">
-        <h2>Real-Time Analytics</h2>
-        <p id="face-recognition-result">Faces Detected: 0</p>
-        <p id="number-plate-result">Number Plates Detected: 0</p>
-        <p id="sentiment-result">Sentiment: Neutral</p>
+    <div class="container">
+        <div class="join-form" id="joinForm">
+            <input type="text" id="roomInput" placeholder="Enter Room ID">
+            <button id="joinButton">Join Room</button>
+        </div>
+        
+        <div class="video-grid">
+            <!-- Local user video -->
+            <div class="video-wrapper" id="localVideoWrapper">
+                <video id="localVideo" autoplay muted></video>
+                <canvas id="localOverlay"></canvas>
+                <div class="user-label">You</div>
+            </div>
+            
+            <!-- Remote user video -->
+            <div class="video-wrapper" id="remoteVideoWrapper">
+                <video id="remoteVideo" autoplay></video>
+                <canvas id="remoteOverlay"></canvas>
+                <div class="user-label">Remote User</div>
+            </div>
+        </div>
+
+        <div class="room-info">
+            <span>Room ID: <span id="roomDisplay"></span></span>
+            <button id="copyButton">Copy Room ID</button>
+        </div>
+        
+        <div class="controls">
+            <button id="toggleVideo">
+                <span class="material-icons">videocam</span>
+            </button>
+            <button id="toggleAudio">
+                <span class="material-icons">mic</span>
+            </button>
+            <button id="toggleAI">
+                <span class="material-icons">face</span>
+            </button>
+            <button id="endCall">
+                <span class="material-icons">call_end</span>
+            </button>
+        </div>
     </div>
-  <div class="video-container">
-    <video id="localVideo" autoplay muted></video>
-    <video id="remoteVideo" autoplay></video>
-  </div>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://docs.opencv.org/4.x/opencv.js"></script>
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

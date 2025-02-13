@@ -1,19 +1,21 @@
 {
-  "name": "hackthon",
+  "name": "ai-video-calling-platform",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "AI-powered video calling platform with real-time analytics",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.21.2",
-    "nodemon": "^3.1.9",
-    "socket.io": "^4.8.1",
-    "uuid": "^11.0.5",
-    "webrtc-adapter": "^9.0.1"
+    "fs": "^0.0.1-security",
+    "https": "^1.0.0",
+    "peer": "^0.6.1",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
   }
 }
