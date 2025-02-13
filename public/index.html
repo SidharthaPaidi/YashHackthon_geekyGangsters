@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Video Call</title>
+  <link rel="stylesheet" href="/style.css">
+
+</head>
+<body>
+    <div id="dashboard">
+        <h2>Real-Time Analytics</h2>
+        <p id="face-recognition-result">Faces Detected: 0</p>
+        <p id="number-plate-result">Number Plates Detected: 0</p>
+        <p id="sentiment-result">Sentiment: Neutral</p>
+    </div>
+  <div class="video-container">
+    <video id="localVideo" autoplay muted></video>
+    <video id="remoteVideo" autoplay></video>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://docs.opencv.org/4.x/opencv.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
